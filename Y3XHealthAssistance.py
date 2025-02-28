@@ -1,18 +1,16 @@
-import streamlit as st
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from Y3X_BBSR.prescribed_health_assistance import prescription_generator
+import streamlit as st ## type:ignore
+from llama_cpp import Llama ##type:ignore
+from prescribed_health_assistance import prescription_generator
 
 class Y3XHealthAssistance:
     def __init__(self):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Load the Llama model from GGUF
+        # self.llm = Llama.from_pretrained(
+        #     repo_id="mav23/AlpaCare-llama1-7b-GGUF",
+        #     filename="alpacare-llama1-7b.Q2_K.gguf"
+        # )
+        self.llm = Llama(model_path=r"C:\Users\swain\Downloads\alpacare-llama1-7b.Q2_K.gguf", n_ctx=2048)
 
-        # Load model and tokenizer on GPU
-        self.model_name = "BioMistral/BioMistral-7B"
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_name).to(self.device)
 
     def generate_output(self):
         st.title('Health Assistance Y3X Innovatech Bhubaneswar')
@@ -32,26 +30,30 @@ class Y3XHealthAssistance:
         if submit_button:
             if all([name, age, height, weight, spo2, temperature, ecg_results, medical_history]):
                 prompt_text = (
-                    f"You are an expert medical assistant. Based on the user's input, provide detailed health recommendations.\n\n"
-                    f"Name: {name}\n"
-                    f"Age: {age}\n"
-                    f"Height: {height} cm\n"
-                    f"Weight: {weight} kg\n"
-                    f"SpO2 Level: {spo2}%\n"
-                    f"Body Temperature: {temperature}°C\n"
-                    f"ECG Results: {ecg_results}\n"
-                    f"Medical History: {medical_history}\n\n"
-                    f"Provide personalized health advice regarding physical health, necessary precautions, and potential concerns."
+                     f"You are an expert doctor. Based on the patient's health data, provide medical advice in minimum 150 words.\n\n"
+                    f"Patient Information:\n"
+                    f"- Name: {name}\n"
+                    f"- Age: {age}\n"
+                    f"- Height: {height} cm\n"
+                    f"- Weight: {weight} kg\n"
+                    f"- SpO2 Level: {spo2}%\n"
+                    f"- Body Temperature: {temperature}°C\n"
+                    f"- ECG Results: {ecg_results}\n"
+                    f"- Medical History: {medical_history}\n\n"
+                    f"🩺 **Doctor's Advice:**"
                 )
 
-                # Tokenize and move input to GPU
-                inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.device)
+                # Generate response using llama_cpp
+                output = self.llm(
+                    prompt=prompt_text,
+                    max_tokens=512,
+                    echo=False
+                )
 
-                with torch.no_grad():
-                    output = self.model.generate(**inputs, max_new_tokens=512)
+                response = output["choices"][0]["text"]
+                print(response)
 
-                response = self.tokenizer.decode(output[0], skip_special_tokens=True)
-
+                # Create and download the prescription PDF
                 output_path = f'{name}_health_report.pdf'
                 prescription = prescription_generator(
                     name,
@@ -76,5 +78,5 @@ class Y3XHealthAssistance:
 
 
 if __name__ == "__main__":
-    app =Y3XHealthAssistance()
+    app = Y3XHealthAssistance()
     app.generate_output()
