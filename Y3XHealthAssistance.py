@@ -1,6 +1,7 @@
 import streamlit as st ## type:ignore
 from llama_cpp import Llama ##type:ignore
 from prescribed_health_assistance import prescription_generator
+from huggingface_hub import hf_hub_download
 
 class Y3XHealthAssistance:
     def __init__(self):
@@ -9,7 +10,12 @@ class Y3XHealthAssistance:
         #     repo_id="mav23/AlpaCare-llama1-7b-GGUF",
         #     filename="alpacare-llama1-7b.Q2_K.gguf"
         # )
-        self.llm = Llama(model_path=r"C:\Users\swain\Downloads\alpacare-llama1-7b.Q2_K.gguf", n_ctx=2048)
+        model_path = hf_hub_download(
+                repo_id="mav23/AlpaCare-llama1-7b-GGUF",
+                filename="alpacare-llama1-7b.Q2_K.gguf",
+            )
+
+        self.llm = Llama(model_path=model_path, n_ctx=2048)
 
 
     def generate_output(self):
